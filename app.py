@@ -4,23 +4,15 @@ import secrets
 from datetime import datetime
 
 import pandas as pd
-from flask import Flask, render_template_string, request, redirect, url_for, session, send_file
-from flask_session import Session
-import PyPDF2
+from flask import Flask, request, redirect, session
 
-# ============================================
-# FLASK APP SETUP
-# ============================================
+from flask_session import Session   # IMPORTANT
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
-
-# ============================================
-# FILE SETUP
-# ============================================
 
 DATA_DIR = "data"
 UPLOAD_DIR = "uploads"
@@ -35,20 +27,15 @@ RESULT_FILE = f"{DATA_DIR}/results.csv"
 SETTINGS_FILE = f"{DATA_DIR}/settings.csv"
 
 
-# ============================================
-# INIT FILES
-# ============================================
-
 def init_files():
     if not os.path.exists(ADMIN_FILE):
-        df = pd.DataFrame([{
+        pd.DataFrame([{
             "admin_id": "ADM001",
             "username": "admin",
             "password": hashlib.md5("admin123".encode()).hexdigest(),
             "email": "admin@system.com",
-            "created_date": datetime.now()
-        }])
-        df.to_csv(ADMIN_FILE, index=False)
+            "created_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }]).to_csv(ADMIN_FILE, index=False)
 
     if not os.path.exists(STUDENT_FILE):
         pd.DataFrame(columns=[
@@ -74,19 +61,11 @@ def init_files():
 init_files()
 
 
-# ============================================
-# HOME
-# ============================================
-
 @app.route("/")
 def home():
     session.clear()
-    return "<h2>Placement System Running 🚀</h2><p>Go to /admin/login or /student/login</p>"
+    return "<h2>Placement System Running 🚀</h2>"
 
-
-# ============================================
-# ADMIN LOGIN
-# ============================================
 
 @app.route("/admin/login", methods=["GET","POST"])
 def admin_login():
@@ -103,18 +82,8 @@ def admin_login():
 
         return "Invalid login"
 
-    return '''
-    <form method="post">
-        <input name="username" placeholder="admin"><br>
-        <input name="password" type="password"><br>
-        <button>Login</button>
-    </form>
-    '''
+    return "<form method='post'>Admin Login</form>"
 
-
-# ============================================
-# ADMIN DASHBOARD
-# ============================================
 
 @app.route("/admin/dashboard")
 def admin_dashboard():
@@ -132,15 +101,10 @@ def admin_dashboard():
     """
 
 
-# ============================================
-# STUDENT REGISTER
-# ============================================
-
 @app.route("/student/register", methods=["GET","POST"])
 def student_register():
     if request.method == "POST":
         df = pd.read_csv(STUDENT_FILE)
-
         sid = f"STU{len(df)+1:03d}"
 
         new = {
@@ -161,26 +125,10 @@ def student_register():
         df = pd.concat([df, pd.DataFrame([new])])
         df.to_csv(STUDENT_FILE, index=False)
 
-        return f"Registered! Your ID: {sid}"
+        return f"Registered! ID: {sid}"
 
-    return '''
-    <form method="post">
-        <input name="name" placeholder="name"><br>
-        <input name="reg_no"><br>
-        <input name="email"><br>
-        <input name="phone"><br>
-        <input name="cgpa"><br>
-        <input name="department"><br>
-        <input name="skills"><br>
-        <input name="password" type="password"><br>
-        <button>Register</button>
-    </form>
-    '''
+    return "<form method='post'>Student Register</form>"
 
-
-# ============================================
-# STUDENT LOGIN
-# ============================================
 
 @app.route("/student/login", methods=["GET","POST"])
 def student_login():
@@ -198,18 +146,8 @@ def student_login():
 
         return "Invalid login"
 
-    return '''
-    <form method="post">
-        <input name="username"><br>
-        <input name="password" type="password"><br>
-        <button>Login</button>
-    </form>
-    '''
+    return "<form method='post'>Student Login</form>"
 
-
-# ============================================
-# STUDENT DASHBOARD
-# ============================================
 
 @app.route("/student/dashboard")
 def student_dashboard():
@@ -219,17 +157,8 @@ def student_dashboard():
     df = pd.read_csv(STUDENT_FILE)
     st = df[df["student_id"] == session["student_id"]].iloc[0]
 
-    return f"""
-    <h2>Welcome {st['name']}</h2>
-    <p>Reg No: {st['reg_no']}</p>
-    <p>CGPA: {st['cgpa']}</p>
-    <a href='/logout'>Logout</a>
-    """
+    return f"<h2>Welcome {st['name']}</h2>"
 
-
-# ============================================
-# LOGOUT
-# ============================================
 
 @app.route("/logout")
 def logout():
@@ -237,10 +166,4 @@ def logout():
     return redirect("/")
 
 
-# ============================================
-# RUN (RENDER SAFE)
-# ============================================
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+# IMPORTANT: NO app.run() needed for Render when using gunicorn
