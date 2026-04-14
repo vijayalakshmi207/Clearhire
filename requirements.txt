@@ -1,0 +1,6 @@
+flask
+pandas
+numpy
+openpyxl
+flask-session
+gunicorn
